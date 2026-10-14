@@ -41,7 +41,8 @@ are read-only and do not start streams or increment station click counters.
 
 `npx @modelcontextprotocol/inspector` 
 
-### MCP Server config.  
+### MCP Server config. 
+`.vscode/mcp.json`
 
 ```json
 {
@@ -59,3 +60,8 @@ are read-only and do not start streams or increment station click counters.
   }
 }
 ```
+### Examples to ask
+
+*"using mcp-server-radio (confirm it), give the name of the top 5 US radios.  Give me the link of these radios"*.  
+
+*"List to me the top five radios from Brasil"*.   
