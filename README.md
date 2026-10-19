@@ -1,23 +1,45 @@
 # Radio Browser MCP server
 
 An MCP server for searching the Radio Browser directory of internet radio
-stations. It uses the local stdio transport supported by VS Code and the Python
-MCP SDK.
+stations. It exposes the MCP Streamable HTTP transport at
+`http://127.0.0.1:8000/mcp`.
 
-## Run in VS Code
+## Run the HTTP server
 
-Open this project folder in VS Code with `uv` installed. The workspace server
-is configured in `.vscode/mcp.json`; use the Start button shown above that file
-or run **MCP: List Servers** from the Command Palette.
+Install [uv](https://docs.astral.sh/uv/) if needed, then start the server from
+the project directory:
 
-To start it manually:
-
-```sh
+```bash
 uv run main.py
 ```
 
-The server needs network access when a search is made. Its stdio output is
-reserved for MCP protocol messages, so do not add `print`-based logging.
+Keep this terminal open while using the MCP server. It is a long-running HTTP
+service, and its request logs (for example, `INFO: ... POST /mcp ...`) are
+normal. Stop it with `Ctrl+C`. The server needs network access when a station
+search is made.
+
+## Connect an MCP client
+
+Add the following server entry to an MCP client's configuration. For clients
+that use the `mcpServers` configuration format, use this snippet:
+
+```json
+{
+    "mcpServers": {
+        "mcp-radio-http": {
+            "type": "http",
+            "url": "http://127.0.0.1:8000/mcp",
+            "tools": [
+                "*"
+            ]
+        }
+    }
+}
+```
+
+Start the HTTP server before connecting the client. If you restart the server,
+reconnect the MCP client so it can establish a new session. The URL must point
+to `/mcp`; requests to the server root (`/`) are not the MCP endpoint.
 
 ## Tools
 
@@ -34,34 +56,13 @@ are read-only and do not start streams or increment station click counters.
 ## References
 
 - [VS Code MCP developer guide](https://code.visualstudio.com/api/extension-guides/ai/mcp.md)
-- [Radio Browser API](https://www.radio-browser.info/). 
+- [Radio Browser API](https://www.radio-browser.info/)
 
+To inspect the MCP server, run `npx @modelcontextprotocol/inspector` and
+connect it to `http://127.0.0.1:8000/mcp`.
 
-### To isnpect the MCP 
+## Example prompts
 
-`npx @modelcontextprotocol/inspector` 
-
-### MCP Server config. 
-`.vscode/mcp.json`
-
-```json
-{
-  "servers": {
-     "mcp-server-radio": {
-      "type": "stdio",
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "/Users/<your-user>/<your-workspace>/mcp-server-radio",
-        "main.py"
-      ]
-    }
-  }
-}
-```
-### Examples to ask
-
-*"using mcp-server-radio (confirm it), give the name of the top 5 US radios.  Give me the link of these radios"*.  
-
-*"List to me the top five radios from Brasil"*.   
+- “Using mcp-radio-http, give me the top 5 radio stations in the US and their
+  stream links.”
+- “List the top five radio stations in Brazil.”

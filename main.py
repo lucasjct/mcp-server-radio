@@ -169,7 +169,7 @@ def search_radio_by_language(
 
 
 def main() -> None:
-    server.run(transport="stdio")
+    server.run("streamable-http")
 
 
 if __name__ == "__main__":
