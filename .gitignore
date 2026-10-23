@@ -39,3 +39,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Databse
+*gz
+*.db
