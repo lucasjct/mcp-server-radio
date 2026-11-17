@@ -4,19 +4,16 @@ from typing import Annotated, Any
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
+from mcp.server.transport_security import TransportSecuritySettings
 from mcp_types import ToolAnnotations
 from pydantic import Field
 from pyradios import RadioBrowser
+from starlette.applications import Starlette
+from starlette.middleware.cors import CORSMiddleware
 
+from auth import TokenValidationClient, create_mcp_auth
+from config import Settings, load_settings
 
-server = MCPServer(
-    "radio-browser",
-    title="Radio Browser",
-    instructions=(
-        "Search the Radio Browser directory for internet radio stations. "
-        "Search tools are read-only and return station stream URLs and metadata."
-    ),
-)
 
 _TOOL_ANNOTATIONS = ToolAnnotations(readOnlyHint=True, openWorldHint=True)
 _STATION_FIELDS = (
@@ -72,15 +69,6 @@ def _search_stations(
     return [_format_station(station) for station in stations]
 
 
-@server.tool(
-    title="Search radio stations",
-    description=(
-        "Search for internet radio stations by name, country, ISO 3166-1 alpha-2 "
-        "country code, language, or tag. At least one filter is required. "
-        "Returns up to 50 stations, ordered by votes, with stream URLs and metadata."
-    ),
-    annotations=_TOOL_ANNOTATIONS,
-)
 def search_radio_stations(
     name: Annotated[str | None, Field(description="Station name to search for.")] = None,
     country: Annotated[str | None, Field(description="Country name to search in.")] = None,
@@ -121,11 +109,6 @@ def search_radio_stations(
     return _search_stations(limit=limit, **filters)
 
 
-@server.tool(
-    title="Search radio stations by name",
-    description="Find radio stations by name and optionally require an exact name match.",
-    annotations=_TOOL_ANNOTATIONS,
-)
 def search_radio(
     name: Annotated[str, Field(description="Station name to search for.")],
     exact_name: Annotated[
@@ -138,11 +121,6 @@ def search_radio(
     return search_radio_stations(name=name, exact_name=exact_name, limit=limit)
 
 
-@server.tool(
-    title="Search radio stations by country code",
-    description="Find radio stations in a country using its two-letter ISO country code.",
-    annotations=_TOOL_ANNOTATIONS,
-)
 def search_radio_by_country(
     countrycode: Annotated[
         str, Field(description="Two-letter ISO 3166-1 alpha-2 country code.")
@@ -154,11 +132,6 @@ def search_radio_by_country(
     return search_radio_stations(country_code=countrycode, limit=limit)
 
 
-@server.tool(
-    title="Search radio stations by language",
-    description="Find radio stations that broadcast in the specified language.",
-    annotations=_TOOL_ANNOTATIONS,
-)
 def search_radio_by_language(
     language: Annotated[str, Field(description="Broadcast language to search for.")],
     limit: Annotated[
@@ -168,8 +141,70 @@ def search_radio_by_language(
     return search_radio_stations(language=language, limit=limit)
 
 
+def create_app(
+    settings: Settings | None = None,
+    *,
+    scalekit_client: TokenValidationClient | None = None,
+) -> Starlette:
+    settings = settings or load_settings()
+    auth_settings, token_verifier = create_mcp_auth(settings, client=scalekit_client)
+    server = MCPServer(
+        "radio-browser",
+        title="Radio Browser",
+        instructions=(
+            "Search the Radio Browser directory for internet radio stations. "
+            "Search tools are read-only and return station stream URLs and metadata."
+        ),
+        auth=auth_settings,
+        token_verifier=token_verifier,
+    )
+    server.tool(
+        title="Search radio stations",
+        description=(
+            "Search for internet radio stations by name, country, ISO 3166-1 alpha-2 "
+            "country code, language, or tag. At least one filter is required. "
+            "Returns up to 50 stations, ordered by votes, with stream URLs and metadata."
+        ),
+        annotations=_TOOL_ANNOTATIONS,
+    )(search_radio_stations)
+    server.tool(
+        title="Search radio stations by name",
+        description="Find radio stations by name and optionally require an exact name match.",
+        annotations=_TOOL_ANNOTATIONS,
+    )(search_radio)
+    server.tool(
+        title="Search radio stations by country code",
+        description="Find radio stations in a country using its two-letter ISO country code.",
+        annotations=_TOOL_ANNOTATIONS,
+    )(search_radio_by_country)
+    server.tool(
+        title="Search radio stations by language",
+        description="Find radio stations that broadcast in the specified language.",
+        annotations=_TOOL_ANNOTATIONS,
+    )(search_radio_by_language)
+    app = server.streamable_http_app(
+        host="127.0.0.1",
+        streamable_http_path="/radio/mcp",
+        transport_security=TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=["127.0.0.1:*", "localhost:*"],
+            allowed_origins=list(settings.cors_allow_origins),
+        ),
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(settings.cors_allow_origins),
+        allow_credentials=True,
+        allow_methods=["GET", "PUT", "POST", "DELETE", "OPTIONS"],
+        allow_headers=["*"],
+    )
+    return app
+
+
 def main() -> None:
-    server.run(transport="stdio")
+    import uvicorn
+
+    uvicorn.run(create_app(), host="0.0.0.0", port=10000)
 
 
 if __name__ == "__main__":
