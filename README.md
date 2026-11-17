@@ -1,8 +1,8 @@
 # Radio Browser MCP server
 
 An MCP server for searching the Radio Browser directory of internet radio
-stations. It uses the local stdio transport supported by VS Code and the Python
-MCP SDK.
+stations. It serves MCP over Streamable HTTP at
+`http://127.0.0.1:10000/radio/mcp`.
 
 ## Run in VS Code
 
@@ -13,11 +13,31 @@ or run **MCP: List Servers** from the Command Palette.
 To start it manually:
 
 ```sh
+cp .env.example .env
+# Fill in the Scalekit values in .env
 uv run main.py
 ```
 
-The server needs network access when a search is made. Its stdio output is
-reserved for MCP protocol messages, so do not add `print`-based logging.
+Keep the process running while connected. The server needs network access when
+a search is made.
+
+## OAuth authentication
+
+The Streamable HTTP endpoint requires a Scalekit-issued OAuth 2.0 bearer token.
+Create an MCP server in the Scalekit dashboard, enable Dynamic Client
+Registration and Client ID Metadata Documents for compatible MCP hosts, then
+copy its environment URL, client credentials, resource ID, and audience name into `.env`.
+Scalekit handles the interactive login and authorization flow; the MCP server
+validates each access token's signature, issuer, expiration, and resource
+audience name before serving tools.
+
+Set `SCALEKIT_RESOURCE_METADA_URL` to the externally reachable MCP endpoint
+when deploying behind a proxy. Set `CORS_ALLOW_ORIGINS` to a comma-separated
+list of exact browser origins. Origins are explicit because credentials are
+enabled; wildcard origins are rejected. The default list allows common local
+development origins.
+
+Never commit `.env` or put real credentials in `.env.example`.
 
 ## Tools
 
@@ -37,29 +57,17 @@ are read-only and do not start streams or increment station click counters.
 - [Radio Browser API](https://www.radio-browser.info/). 
 
 
-### To isnpect the MCP 
+### Inspect the MCP
 
-`npx @modelcontextprotocol/inspector` 
+Run `npx @modelcontextprotocol/inspector` and connect to
+`http://127.0.0.1:10000/radio/mcp` using Streamable HTTP.
 
-### MCP Server config. 
-`.vscode/mcp.json`
+### MCP server configuration
 
-```json
-{
-  "servers": {
-     "mcp-server-radio": {
-      "type": "stdio",
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "/Users/<your-user>/<your-workspace>/mcp-server-radio",
-        "main.py"
-      ]
-    }
-  }
-}
-```
+VS Code reads the server configuration from `.vscode/mcp.json`. It uses the
+same Streamable HTTP URL above. Configure the Scalekit MCP server as the OAuth
+authorization server for that resource so VS Code can complete login and send
+its bearer token.
 ### Examples to ask
 
 *"using mcp-server-radio (confirm it), give the name of the top 5 US radios.  Give me the link of these radios"*.  

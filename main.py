@@ -1,4 +1,5 @@
 from functools import lru_cache
+import os
 import re
 from typing import Annotated, Any
 
@@ -204,7 +205,7 @@ def create_app(
 def main() -> None:
     import uvicorn
 
-    uvicorn.run(create_app(), host="0.0.0.0", port=10000)
+    uvicorn.run(create_app(), host="0.0.0.0", port=int(os.environ.get("PORT", "10000")))
 
 
 if __name__ == "__main__":
