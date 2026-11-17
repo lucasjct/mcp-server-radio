@@ -29,7 +29,7 @@ Create a `.env` file in the project root and provide the following settings:
 | `SCALEKIT_CLIENT_SECRET` | Yes | Secret for the Scalekit client. Keep it private. |
 | `SCALEKIT_RESOURCE_ID` | Yes | ID of the MCP resource configured in Scalekit. |
 | `SCALEKIT_AUDIENCE_NAME` | Yes | Audience value expected in access tokens. |
-| `SCALEKIT_RESOURCE_METADATA_URL` | For deployment | Public MCP endpoint URL, such as `https://your-service.onrender.com/radio/mcp`. |
+| `SCALEKIT_RESOURCE_METADATA_URL` | For deployment | Public MCP endpoint URL, such as `https://mcp-server-radio.onrender.com/radio/mcp`. |
 | `CORS_ALLOW_ORIGINS` | No | Comma-separated list of exact browser origins. Defaults to common local development origins. |
 | `PORT` | No | Listening port provided by the hosting platform. Defaults to `10000`. |
 
@@ -62,16 +62,21 @@ network access to the Radio Browser API.
 
 ## Connect an MCP client
 
-For VS Code, the workspace configuration is in `.vscode/mcp.json`. It points
-to the local endpoint by default. To connect to a deployed server, configure
-the MCP client with the deployed endpoint, for example:
+For VS Code, the workspace configuration is in `.vscode/mcp.json` and points
+to the deployed service. The MCP endpoint is:
+
+```text
+https://mcp-server-radio.onrender.com/radio/mcp
+```
+
+The equivalent VS Code configuration is:
 
 ```json
 {
   "servers": {
     "radio-browser": {
       "type": "http",
-      "url": "https://your-service.onrender.com/radio/mcp"
+      "url": "https://mcp-server-radio.onrender.com/radio/mcp"
     }
   }
 }
@@ -90,11 +95,11 @@ uv run main.py
 
 Set the required Scalekit variables in the Render dashboard. Set
 `SCALEKIT_RESOURCE_METADATA_URL` to the public endpoint URL, such as
-`https://your-service.onrender.com/radio/mcp`, and configure the corresponding
+`https://mcp-server-radio.onrender.com/radio/mcp`, and configure the corresponding
 resource and audience in Scalekit. Render supplies `PORT`; the server binds to
 that port and listens on `0.0.0.0`.
 
-The root URL (`https://your-service.onrender.com/`) is not an application page
+The root URL (`https://mcp-server-radio.onrender.com/`) is not an application page
 and may return `404 Not Found`. Use `/radio/mcp` as the MCP endpoint. An
 unauthenticated request to that endpoint may return `401 Authentication
 required`; an MCP client should follow the OAuth flow.
