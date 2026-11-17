@@ -41,7 +41,7 @@ class ConfigTests(unittest.TestCase):
             "SCALEKIT_CLIENT_SECRET": "client-secret",
             "SCALEKIT_RESOURCE_ID": "res_radio",
             "SCALEKIT_AUDIENCE_NAME": "radio-api",
-            "SCALEKIT_RESOURCE_METADA_URL": "https://radio.example.com/radio/mcp",
+            "SCALEKIT_RESOURCE_METADATA_URL": "https://radio.example.com/radio/mcp",
             "CORS_ALLOW_ORIGINS": "https://radio.example.com, http://localhost:3000",
         }
         with patch.dict(os.environ, env, clear=True):
@@ -146,6 +146,28 @@ class AuthenticatedMcpAppTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 401)
         self.assertIn("WWW-Authenticate", response.headers)
         self.assertIn("oauth-protected-resource", response.headers["WWW-Authenticate"])
+
+    async def test_configured_public_host_is_allowed(self) -> None:
+        settings = Settings(
+            scalekit_environment_url="https://example.scalekit.com",
+            scalekit_client_id="client-id",
+            scalekit_client_secret="client-secret",
+            scalekit_resource_id="res_radio",
+            scalekit_audience_name="radio-api",
+            resource_server_url="https://mcp-server-radio.onrender.com/radio/mcp",
+            cors_allow_origins=("http://localhost:3000",),
+        )
+        app = main.create_app(settings, scalekit_client=FakeScalekitClient())
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="https://mcp-server-radio.onrender.com",
+        ) as client:
+            response = await client.get(
+                "/radio/mcp",
+                headers={"host": "mcp-server-radio.onrender.com"},
+            )
+
+        self.assertEqual(response.status_code, 401)
 
     async def test_cors_preflight_allows_configured_origin_and_methods(self) -> None:
         response = await self.client.options(

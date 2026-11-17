@@ -2,6 +2,7 @@ from functools import lru_cache
 import os
 import re
 from typing import Annotated, Any
+from urllib.parse import urlsplit
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
@@ -188,7 +189,11 @@ def create_app(
         streamable_http_path="/radio/mcp",
         transport_security=TransportSecuritySettings(
             enable_dns_rebinding_protection=True,
-            allowed_hosts=["127.0.0.1:*", "localhost:*"],
+            allowed_hosts=[
+                "127.0.0.1:*",
+                "localhost:*",
+                urlsplit(settings.resource_server_url).netloc,
+            ],
             allowed_origins=list(settings.cors_allow_origins),
         ),
     )
